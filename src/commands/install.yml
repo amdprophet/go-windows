@@ -1,0 +1,69 @@
+description: Install Go. Supports windows/amd64.
+parameters:
+  version:
+    description: The version of Go to install.
+    type: string
+    default: "1.14.6"
+  install-dir:
+    description: The path to find the Go installation.
+    type: string
+    default: 'c:\Go'
+  cache:
+    description: Whether or not to cache the installation.
+    type: boolean
+    default: true
+  cache-key:
+    description: |
+      String to use in cache key. Typically overridden when needed to bust cache.
+    type: string
+    default: "v1"
+steps:
+  - when:
+      condition:
+        equal: [<< parameters.cache >>, true]
+      steps:
+        - run:
+            name: Remove existing Go installation
+            shell: bash.exe -eo pipefail
+            command: rm -rf "$(cygpath '<< parameters.install-dir >>')"
+        - run:
+            name: Prep cache restore
+            shell: bash.exe -eo pipefail
+            command: mkdir -pv "$(cygpath '<< parameters.install-dir >>')"
+        - restore_cache:
+            keys:
+              - go-windows-<< parameters.cache-key >>-<< parameters.version >>-{{ arch }}
+  - run:
+      name: Install Go
+      shell: bash.exe -eo pipefail
+      command: |
+        if which go; then
+          if go version | grep "<< parameters.version >>"; then
+            echo "Go already installed, skipping download."
+            exit 0
+          else
+            echo "Go is already installed but it is the wrong version."
+          fi
+        fi
+
+        rm -rf "<< parameters.install-dir >>"
+        echo "Downloading the requested version of Go."
+        base_url="https://storage.googleapis.com/golang"
+        filename="go<< parameters.version >>.windows-amd64.msi"
+        curl -LsO "${base_url}/${filename}"
+        echo "Installing the requested version of Go."
+        msiexec.exe //package "${filename}" //quiet
+  - run:
+      name: Verify Go installation
+      command: |
+        echo $PATH
+        ls -l "$(cygpath '<< parameters.install-dir >>')/bin"
+        go version
+  - when:
+      condition:
+        equal: [<< parameters.cache >>, true]
+      steps:
+        - save_cache:
+            key: go-windows-<< parameters.cache-key >>-<< parameters.version >>-{{ arch }}
+            paths:
+              - << parameters.install-dir >>

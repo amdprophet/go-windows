@@ -1,0 +1,7 @@
+version: 2.1
+
+description: Common CircleCI tasks for Go on Windows.
+
+display:
+  source_url: https://github.com/amdprophet/go-windows-orb
+  home_url: https://golang.org/
